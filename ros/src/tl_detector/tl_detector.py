@@ -137,32 +137,40 @@ class TLDetector(object):
 
         """
         closest_light = None
-        line_wp_idx = None
+        line_wp_idx = -1
+        state = TrafficLight.UNKNOWN
 
         # List of positions that correspond to the line to stop in front of for a given intersection
         stop_line_positions = self.config['stop_line_positions']
-        if(self.pose):
-            car_wp_idx = self.get_closest_waypoint(self.pose.pose.position.x , self.pose.pose.position.x)
+        if self.pose:
+            car_wp_idx = self.get_closest_waypoint(self.pose.pose.position.x , self.pose.pose.position.y)
 
-        #TODO find the closest visible traffic light (if one exists)
-        diff = len(self.waypoints.waypoints)
-        for i, light in enumerate(self.lights):
-            #Get stop line waypoint index
-            line = stop_line_positions[i]
-            temp_wp_idx = self.get_closest_waypoint(line[0], line [1])
-            #Find closest stop line index
-            d = temp_wp_idx - car_wp_idx
-            if d >= 0 and d < diff:
-                diff = d
-                closest_light = light
-                line_wp_idx = temp_wp_idx
-        rospy.logfatal("process traffic lights")
+            diff = len(self.waypoints.waypoints)
+            for i, light in enumerate(self.lights):
+                #Get stop line waypoint index
+                line = stop_line_positions[i]
+                temp_wp_idx = self.get_closest_waypoint(line[0], line [1])
+                #Find closest stop line index
+                d = temp_wp_idx - car_wp_idx
+                if d >= 0 and d < diff:
+                    diff = d
+                    closest_light = light
+                    line_wp_idx = temp_wp_idx
+
         if closest_light:
-            state = self.get_light_state(light)
-            rospy.logfatal("light state: %d", state)
-            return line_wp_idx, state
+            state = self.get_light_state(closest_light)
 
-        return -1, TrafficLight.UNKNOWN
+        return line_wp_idx, state
+
+#    def to_string(self, state):
+#        out = "unknown"
+#        if state == TrafficLight.GREEN:
+#            out = "green"
+#        elif state == TrafficLight.YELLOW:
+#            out = "yellow"
+#        elif state == TrafficLight.RED:
+#            out = "red"
+#        return out
 
 if __name__ == '__main__':
     try:

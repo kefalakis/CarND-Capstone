@@ -5,7 +5,7 @@ import rospy
 
 GAS_DENSITY = 2.858
 ONE_MPH = 0.44704
-
+MAX_BRAKE = 400
 
 class Controller(object):
     def __init__(self, vehicle_mass, fuel_capacity, brake_deadband, decel_limit,
@@ -17,10 +17,11 @@ class Controller(object):
 
         kp = 0.3
         ki = 0.1
-        kd = 0.
-        throttle_min = 0.
-        throttle_max = 1.
-        self.throttle_controller = PID(kp, ki, throttle_min, throttle_max)
+        kd = 0.0
+        throttle_min = 0.0
+        throttle_max = 0.4
+
+        self.throttle_controller = PID(kp, ki, kd, throttle_min, throttle_max)
 
         tau = 0.5 # 1/(2*pi*tau) cutoff frequency
         ts = 0.02 #sampling time
@@ -38,7 +39,8 @@ class Controller(object):
     def control(self, current_vel, dbw_enabled, linear_vel, angular_vel):
         if not dbw_enabled:
             self.throttle_controller.reset()
-            return 0., 0., 0.
+            return 0.0, 0.0, 0.0
+
         current_vel = self.vel_lpf.filt(current_vel)
         steering = self.yaw_controller.get_steering(linear_vel, angular_vel, current_vel)
 
@@ -48,16 +50,17 @@ class Controller(object):
         current_time = rospy.get_time()
         sample_time = current_time - self.last_time
 
+        self.last_time = current_time
         throttle = self.throttle_controller.step(vel_error, sample_time)
-        brake = 0
+        brake = 0.0
 
-        if linear_vel == 0 and current_vel < 0.1:
-            throttle = 0
-            brake = 0
+        if linear_vel == 0.0 and current_vel < 0.1:
+            throttle = 0.0
+            brake = MAX_BRAKE
 
-        elif throttle < .1 and vel_error == 0:
-            throttle = 0
+        elif throttle < 0.1 and vel_error < 0:
+            throttle = 0.0
             decel = max(vel_error, self.decel_limit)
-            brake = abs(decel) * self.vehicle_mass * self.wheel_radius
+            brake = min(MAX_BRAKE, abs(decel) * self.vehicle_mass * self.wheel_radius)
 
         return throttle, brake, steering
