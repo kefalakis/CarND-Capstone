@@ -1,4 +1,3 @@
-
 MIN_NUM = float('-inf')
 MAX_NUM = float('inf')
 
@@ -29,6 +28,7 @@ class PID(object):
             val = self.min
         else:
             self.int_val = integral
+
         self.last_error = error
 
         return val
